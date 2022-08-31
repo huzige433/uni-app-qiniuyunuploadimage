@@ -1,6 +1,16 @@
 <template>
 	<view class="content">
-		<image class="logo" src="/static/logo.png"></image>
+		<view class="uni-margin-wrap">
+			<swiper class="swiper" circular indicator-dots="indicatorDots" autoplay="autoplay" interval=3000
+				:duration="duration" :style="{ height: '500px' }">
+				<swiper-item v-for="(item,index) in imgurls" :key="index">
+					<view class="swiper-item uni-bg-red">
+						<img :src="item.url" alt="" srcset="">
+					</view>
+				</swiper-item>
+			</swiper>
+		</view>
+		
 		<view class="text-area">
 			<text class="title">{{title}}</text>
 			<u-search placeholder="日照香炉生紫烟" v-model="keyword" :clearabled="true"
@@ -16,26 +26,23 @@
 			return {
 				title: 'Hello',
 				keyword: '',
-				upToken: ''
+				imgurls:[],
+				collection:uniCloud.database().collection('imagedb')
 			}
 		},
 		onLoad() {
-
-			const todo = uniCloud.importObject('qiniufunction')
-			const res = todo.uptoken()
-			res.then(
-				(value) => {
-					this.upToken = value
-					console.log(this.upToken)
-				},
-				(rezon) => {
-					console.log(rezon)
-				}
-			)
+			console.log(this.imgurls)
+			var that =this
+			this.collection.limit(5).get().then((res)=>{
+				console.log(res.result.data)
+				that.imgurls=res.result.data
+			})
 		},
 		methods: {
-			updataimage() {
-				var that = this
+			async updataimage() {
+				var that =this
+				const todo = uniCloud.importObject('qiniufunction')
+				const upToken = await todo.uptoken()
 				uni.chooseImage({
 					count: 1, //默认9
 					sizeType: ["original", "compressed"], //可以指定是原图还是压缩图，默认二者都有
@@ -52,13 +59,21 @@
 							name: 'file',
 							formData: {
 								'key': that.guid()+".jpg",
-								'token': that.upToken
+								'token': upToken
 							},
 							success: (uploadFileRes) => {
 								let key = JSON.parse(uploadFileRes.data).key;
 								let partImgUrl = "http://rhgwdl6lb.hn-bkt.clouddn.com/"+key;
 								console.log(partImgUrl)
+								uni.showToast({
+									title:partImgUrl,
+									duration:3000,
+								})
 								uni.hideLoading()
+								that.collection.add([{
+								  name: key,
+								  url:partImgUrl
+								}]).then((res)=>{console.log("新增成功")})
 							},
 							fail: (err) => {
 								console.log('fail', err);
@@ -108,4 +123,34 @@
 		font-size: 36rpx;
 		color: #8f8f94;
 	}
+	
+	.uni-margin-wrap {
+			width: 690rpx;
+			width: 100%;
+		}
+		.swiper {
+			height: 300rpx;
+		}
+		.swiper-item {
+			display: block;
+			height: 300rpx;
+			line-height: 300rpx;
+			text-align: center;
+		}
+		.swiper-list {
+			margin-top: 40rpx;
+			margin-bottom: 0;
+		}
+		.uni-common-mt {
+			margin-top: 60rpx;
+			position: relative;
+		}
+		.info {
+			position: absolute;
+			right: 20rpx;
+		}
+		.uni-padding-wrap {
+			width: 550rpx;
+			padding: 0 100rpx;
+		}
 </style>
